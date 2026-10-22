@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesador de Asistencia Biométrico - Tanuki Foods</title>
+    <!-- SheetJS CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #c0392b;
+            --secondary-color: #2c3e50;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1250px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 {
+            color: var(--secondary-color);
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .step-badge {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"], input[type="file"], select, input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        input[type="text"], input[type="file"] {
+            width: 100%;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            font-size: 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-right: 8px;
+        }
+
+        button:hover {
+            background-color: #a93226;
+        }
+
+        .btn-secondary {
+            background-color: #27ae60;
+        }
+        .btn-secondary:hover {
+            background-color: #1e8449;
+        }
+
+        .btn-export {
+            background-color: #2980b9;
+        }
+        .btn-export:hover {
+            background-color: #1f618d;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .block-card {
+            border: 1px solid #e0e0e0;
+            border-left: 5px solid var(--secondary-color);
+            background-color: #fafafa;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+
+        .alert-box {
+            background-color: #fce4e4;
+            border-left: 4px solid #e74c3c;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            color: #c0392b;
+        }
+
+        .edit-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 10px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        .badge-danger {
+            background-color: #e74c3c;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .badge-success {
+            background-color: #27ae60;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .badge-info {
+            background-color: #2980b9;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h1>📊 Procesador de Registros Biométricos - Tanuki Foods</h1>
+        <p>Módulo con turnos nocturnos, control de festivos, validación de almuerzos y compensación de déficit semanal.</p>
+        
+        <div class="form-group">
+            <label for="modoProcesamiento">Modo de Procesamiento:</label>
+            <select id="modoProcesamiento" onchange="toggleModoArchivo(this.value)">
+                <option value="nuevo">1. Iniciar Nuevo Procesamiento (Reporte Crudo Biométrico)</option>
+                <option value="acumular">2. Anexar Período a Matriz Corregida Previa (Acumulación con Revisión)</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="groupArchivoInicial">
+            <label for="excelFile">Seleccionar Archivo (Reporte Crudo o Matriz Previa Corregida .xlsx / .csv):</label>
+            <input type="file" id="excelFile" accept=".xlsx, .xls, .csv, .xlsm">
+        </div>
+
+        <div class="form-group" id="groupArchivoAnexo" style="display:none;">
+            <label for="matrizPreviaFile">1. Seleccionar Matriz Corregida Previa (.xlsx / .csv):</label>
+            <input type="file" id="matrizPreviaFile" accept=".xlsx, .xls, .csv, .xlsm">
+            <br><br>
+            <label for="nuevoReporteFile">2. Seleccionar Nuevo Reporte del Biométrico a Anexar (.xlsx / .csv):</label>
+            <input type="file" id="nuevoReporteFile" accept=".xlsx, .xls, .csv, .xlsm">
+        </div>
+
+        <div class="form-group">
+            <label for="inputFestivos">Fechas de Festivos (Formato YYYY-MM-DD, separadas por comas):</label>
+            <input type="text" id="inputFestivos" value="2026-10-12, 2026-11-02" placeholder="Ej: 2026-10-12, 2026-11-02">
+            <div class="help-text">Ingresa las fechas que deseas computar como festivos/recargo oficial para el período cargado.</div>
+        </div>
+
+        <button onclick="iniciarProcesamiento()">Procesar y Escanear Turnos / Novedades</button>
+    </div>
+
+    <div id="resultadoRango" class="card" style="display:none;">
+        <h2>🗓️ Período Detectado</h2>
+        <p id="infoPeriodo"></p>
+    </div>
+
+    <!-- PASO 1: FILTRO DE AUSENTISMOS -->
+    <div id="seccionPaso1" class="card" style="display:none;">
+        <span class="step-badge">Paso 1 de 3</span>
+        <h2>🛡️ Filtro de Ausentismos y Novedades Continuas (Agrupado por Colaborador)</h2>
+        <p>Se detectaron días con marcación "0" continua. Configura y confirma las novedades por bloque:</p>
+        <div id="contenedorBloquesNovedades"></div>
+    </div>
+
+    <!-- PASO 2: CORRECCIÓN Y VALIDACIÓN DE TURNOS NOCTURNOS Y ALMUERZOS -->
+    <div id="seccionPaso2" class="card" style="display:none;">
+        <span class="step-badge">Paso 2 de 3</span>
+        <h2>⚠️ Validación de Turnos, Cruces de Medianoche y Almuerzos en 2 Registros</h2>
+        <p>Revisa y confirma las marcaciones atípicas, nocturnas o jornadas de 2 registros > 8 horas:</p>
+        <div id="contenedorBloquesAtipicos"></div>
+    </div>
+
+    <!-- RESULTADOS CONSOLIDADOS -->
+    <div id="seccionResultados" class="card" style="display:none;">
+        <h2 id="tituloRangoProcesado">📈 Resumen Consolidado de Nómina</h2>
+        
+        <div class="action-bar">
+            <button class="btn-export" onclick="descargarMatrizGeneralExcel()">📊 Exportar Matriz General Resumen (.xlsx)</button>
+            <button class="btn-secondary" onclick="descargarNovedadesExcel()">📈 Exportar Reporte Consolidado de Novedades (.xlsx)</button>
+        </div>
+
+        <table id="tablaResumen">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Horas Ordinarias</th>
+                    <th>Horas Extras (Netas tras Déficit)</th>
+                    <th>Recargo Nocturno (Post 19:00 / 100% Nocturno)</th>
+                    <th>Recargo Fechas Habilitadas</th>
+                    <th>Novedades Aplicadas</th>
+                </tr>
+            </thead>
+            <tbody id="tbodyResumen"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let datosProcesadosGlobal = [];
+    let registrosCargadosRows = null;
+    let festivosConfigurados = [];
+    let novedadesAusentismoDiaADia = {}; 
+    let marcacionesCorregidas = {}; 
+    let decisionesAlmuerzo = {}; 
+    let estructuraMatrizExportar = [];
+    let matrizPreviaData = null; 
+    let trabajoEnProgreso = false;
+    let esMatrizYaProcesada = false;
+    let rangoFechasGlobalStr = "";
+
+    window.onload = function() {
+        // Inicialización
+    };
+
+    function toggleModoArchivo(val) {
+        if (val === 'acumular') {
+            document.getElementById('groupArchivoInicial').style.display = 'none';
+            document.getElementById('groupArchivoAnexo').style.display = 'block';
+        } else {
+            document.getElementById('groupArchivoInicial').style.display = 'block';
+            document.getElementById('groupArchivoAnexo').style.display = 'none';
+        }
+    }
+
+    function obtenerFestivosConfigurados() {
+        const txt = document.getElementById('inputFestivos').value;
+        if (!txt) return [];
+        return txt.split(',').map(f => f.trim()).filter(f => f.length > 0);
+    }
+
+    window.addEventListener('beforeunload', function (e) {
+        if (trabajoEnProgreso) {
+            e.preventDefault();
+            e.returnValue = 'Tienes avances sin guardar en tu revisión. ¿Seguro que deseas salir?';
+            return e.returnValue;
+        }
+    });
+
+    function parseCSVLine(line) {
+        let result = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            let c = line[i];
+            if (c === '"') {
+                inQuotes = !inQuotes;
+            } else if (c === ',' && !inQuotes) {
+                result.push(cur.trim().replace(/^"|"$/g, ''));
+                cur = '';
+            } else {
+                cur += c;
+            }
+        }
+        result.push(cur.trim().replace(/^"|"$/g, ''));
+        return result;
+    }
+
+    function timeToMinutes(timeStr) {
+        if (!timeStr || !timeStr.includes(':')) return null;
+        const parts = timeStr.split(':');
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+
+    function getSunSatWeekKey(dateStr) {
+        let cleanDate = dateStr;
+        if (!cleanDate.includes('-') || cleanDate.split('-')[0].length < 4) {
+            cleanDate = `2026-${cleanDate.replace(/^\//, '')}`;
+        }
+        const parts = cleanDate.split('-');
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]) - 1;
+        const day = parseInt(parts[2]);
+
+        const d = new Date(year, month, day);
+        const dayOfWeek = d.getDay(); 
+        d.setDate(d.getDate() - dayOfWeek);
+
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function iniciarProcesamiento() {
+        festivosConfigurados = obtenerFestivosConfigurados();
+        const modo = document.getElementById('modoProcesamiento').value;
+
+        if (modo === 'acumular') {
+            const fileMatriz = document.getElementById('matrizPreviaFile').files[0];
+            const fileNuevo = document.getElementById('nuevoReporteFile').files[0];
+
+            if (!fileMatriz || !fileNuevo) {
+                alert('Por favor selecciona ambos archivos: La Matriz Corregida Previa y el Nuevo Reporte.');
+                return;
+            }
+
+            const reader1 = new FileReader();
+            reader1.onload = function(e1) {
+                const data1 = new Uint8Array(e1.target.result);
+                const wb1 = XLSX.read(data1, { type: 'array' });
+                const s1 = wb1.Sheets[wb1.SheetNames[0]];
+                let rawMatriz = XLSX.utils.sheet_to_json(s1, { header: 1 });
+
+                matrizPreviaData = rawMatriz.map(row => {
+                    if (row.length === 1 && typeof row[0] === 'string' && row[0].includes(',')) return parseCSVLine(row[0]);
+                    return row.map(cell => typeof cell === 'string' ? cell.replace(/^"|"$/g, '').trim() : cell);
+                });
+
+                const reader2 = new FileReader();
+                reader2.onload = function(e2) {
+                    const data2 = new Uint8Array(e2.target.result);
+                    const wb2 = XLSX.read(data2, { type: 'array' });
+                    const s2 = wb2.Sheets[wb2.SheetNames[0]];
+                    let rawNuevo = XLSX.utils.sheet_to_json(s2, { header: 1 });
+
+                    registrosCargadosRows = rawNuevo.map(row => {
+                        if (row.length === 1 && typeof row[0] === 'string' && row[0].includes(',')) return parseCSVLine(row[0]);
+                        return row.map(cell => typeof cell === 'string' ? cell.replace(/^"|"$/g, '').trim() : cell);
+                    });
+
+                    esMatrizYaProcesada = false;
+                    trabajoEnProgreso = true;
+                    novedadesAusentismoDiaADia = {};
+                    marcacionesCorregidas = {};
+                    decisionesAlmuerzo = {};
+                    document.getElementById('seccionPaso1').style.display = 'none';
+                    document.getElementById('seccionPaso2').style.display = 'none';
+                    document.getElementById('seccionResultados').style.display = 'none';
+                    ejecutarPaso1();
+                };
+                reader2.readAsArrayBuffer(fileNuevo);
+            };
+            reader1.readAsArrayBuffer(fileMatriz);
+
+        } else {
+            const fileInput = document.getElementById('excelFile');
+            if (!fileInput.files.length) {
+                alert('Por favor selecciona un archivo Excel o CSV.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                let rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+                registrosCargadosRows = rawRows.map(row => {
+                    if (row.length === 1 && typeof row[0] === 'string' && row[0].includes(',')) return parseCSVLine(row[0]);
+                    return row.map(cell => typeof cell === 'string' ? cell.replace(/^"|"$/g, '').trim() : cell);
+                });
+
+                matrizPreviaData = null;
+                trabajoEnProgreso = true;
+                novedadesAusentismoDiaADia = {};
+                marcacionesCorregidas = {};
+                decisionesAlmuerzo = {};
+                document.getElementById('seccionPaso1').style.display = 'none';
+                document.getElementById('seccionPaso2').style.display = 'none';
+                document.getElementById('seccionResultados').style.display = 'none';
+
+                let primerCelda = registrosCargadosRows[0] && registrosCargadosRows[0][0] ? String(registrosCargadosRows[0][0]).trim() : '';
+
+                if (primerCelda.includes('Reporte procesado')) {
+                    esMatrizYaProcesada = true;
+                    ejecutarPaso2MatrizPrevia();
+                } else {
+                    esMatrizYaProcesada = false;
+                    ejecutarPaso1();
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+    }
+
+    // PASO 1: DETECCIÓN DE AUSENTISMOS
+    function ejecutarPaso1() {
+        let rangoInfo = registrosCargadosRows[2] ? registrosCargadosRows[2][0] : '';
+        document.getElementById('infoPeriodo').innerText = rangoInfo || 'Período cargado correctamente';
+        document.getElementById('resultadoRango').style.display = 'block';
+
+        const fechasHeader = registrosCargadosRows[4];
+        let colIndex = 4;
+        let year = "2026";
+        if (rangoInfo && rangoInfo.includes("Desde:")) year = rangoInfo.split("Desde:")[1].trim().substring(0, 4);
+
+        let fechasProcesadas = [];
+        while (fechasHeader && colIndex < fechasHeader.length && fechasHeader[colIndex]) {
+            let valHeader = fechasHeader[colIndex].toString().trim();
+            if (valHeader.includes("Días") || valHeader.includes("Duración") || valHeader.includes("Tarde") || valHeader.includes("Tiempo")) break;
+            fechasProcesadas.push({ col: colIndex, fecha: `${year}-${valHeader}` });
+            colIndex++;
+        }
+
+        let novedadesPorEmpleado = {};
+
+        for (let r = 6; r < registrosCargadosRows.length; r++) {
+            let id = registrosCargadosRows[r][0];
+            let nombre = registrosCargadosRows[r][1];
+
+            if (id && nombre && id !== 'ID') {
+                let numRow = null;
+                for (let subR = r; subR < Math.min(r + 15, registrosCargadosRows.length); subR++) {
+                    if (registrosCargadosRows[subR][3] === 'Horario 1 Número de registros de entrada/salida') {
+                        numRow = registrosCargadosRows[subR];
+                    }
+                }
+
+                if (numRow) {
+                    let enRacha = false;
+                    let fechasRacha = [];
+
+                    fechasProcesadas.forEach((f, idx) => {
+                        let numRegs = String(numRow[f.col] || '0');
+                        if (numRegs === '0') {
+                            if (!enRacha) enRacha = true;
+                            fechasRacha.push(f.fecha);
+                        } else {
+                            if (enRacha) {
+                                if (fechasRacha.length >= 2) {
+                                    fechasRacha.forEach(fechaInd => {
+                                        let key = `${nombre}_${fechaInd}`;
+                                        if (!novedadesAusentismoDiaADia.hasOwnProperty(key)) {
+                                            if (!novedadesPorEmpleado[nombre]) novedadesPorEmpleado[nombre] = [];
+                                            novedadesPorEmpleado[nombre].push(fechaInd);
+                                        }
+                                    });
+                                }
+                                enRacha = false;
+                                fechasRacha = [];
+                            }
+                        }
+                    });
+
+                    if (enRacha && fechasRacha.length >= 2) {
+                        fechasRacha.forEach(fechaInd => {
+                            let key = `${nombre}_${fechaInd}`;
+                            if (!novedadesAusentismoDiaADia.hasOwnProperty(key)) {
+                                if (!novedadesPorEmpleado[nombre]) novedadesPorEmpleado[nombre] = [];
+                                novedadesPorEmpleado[nombre].push(fechaInd);
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        const contenedor = document.getElementById('contenedorBloquesNovedades');
+        contenedor.innerHTML = '';
+
+        let nombresPendientes = Object.keys(novedadesPorEmpleado);
+
+        if (nombresPendientes.length === 0) {
+            contenedor.innerHTML = '<p>✅ No hay ausencias continuas pendientes por clasificar.</p>';
+            document.getElementById('seccionPaso1').style.display = 'block';
+            ejecutarPaso2();
+            return;
+        }
+
+        nombresPendientes.forEach(empNombre => {
+            let htmlBloque = `<div class="block-card">
+                <h3>👤 Colaborador: <strong>${empNombre}</strong></h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha Específica</th>
+                            <th>Estado Biométrico</th>
+                            <th>Clasificación de la Novedad</th>
+                            <th>Detalle / Estandarización</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            novedadesPorEmpleado[empNombre].forEach(fechaInd => {
+                let key = `${empNombre}_${fechaInd}`;
+                htmlBloque += `
+                    <tr>
+                        <td><strong>${fechaInd}</strong></td>
+                        <td><span class="badge-danger">Sin Marcación (0)</span></td>
+                        <td>
+                            <select id="tipo_${key}" class="select-nov-${empNombre}" data-key="${key}" onchange="toggleDetalleNovedadDia(this, '${key}')">
+                                <option value="descanso">Descanso Programado / Rotativo (0.0 hs)</option>
+                                <option value="incapacidad">Incapacidad Médica (7.0 hs)</option>
+                                <option value="vacaciones">Día de Vacaciones (7.0 hs)</option>
+                                <option value="falla_huella">Falla de Huella / Biométrico (Asignar Horario Real)</option>
+                            </select>
+                        </td>
+                        <td>
+                            <div id="div_det_${key}">
+                                <span class="badge-info">Día sin costo adicional</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            htmlBloque += `</tbody></table><br>
+                <button class="btn-secondary btn-small" onclick="confirmarBloqueNovedades('${empNombre}')">Confirmar Novedades de ${empNombre}</button>
+            </div>`;
+
+            contenedor.innerHTML += htmlBloque;
+        });
+
+        document.getElementById('seccionPaso1').style.display = 'block';
+    }
+
+    function toggleDetalleNovedadDia(selectElem, key) {
+        const divDet = document.getElementById(`div_det_${key}`);
+        const val = selectElem.value;
+
+        if (val === 'descanso') {
+            divDet.innerHTML = `<span class="badge-info">Día sin costo adicional</span>`;
+        } else if (val === 'incapacidad' || val === 'vacaciones') {
+            divDet.innerHTML = `<span class="badge-warning">Computa 7.00 hrs ordinarias</span>`;
+        } else if (val === 'falla_huella') {
+            divDet.innerHTML = `<input type="text" id="horario_${key}" placeholder="Ej: 11:30/15:30/16:30/21:00" style="width: 200px;">`;
+        }
+    }
+
+    function confirmarBloqueNovedades(empNombre) {
+        const confirmacion = confirm(`¿Deseas aplicar la clasificación de novedades para los datos de ${empNombre}?`);
+
+        if (confirmacion) {
+            const selects = document.querySelectorAll(`.select-nov-${empNombre}`);
+            selects.forEach(select => {
+                let key = select.getAttribute('data-key');
+                let tipoNov = select.value;
+                let inputHuella = document.getElementById(`horario_${key}`);
+                let horarioHuellaVal = inputHuella ? inputHuella.value.trim() : '';
+
+                novedadesAusentismoDiaADia[key] = {
+                    tipo: tipoNov,
+                    horarioHuella: horarioHuellaVal
+                };
+            });
+
+            ejecutarPaso1();
+        }
+    }
+
+    // PASO 2: MATRIZ PREVIA
+    function ejecutarPaso2MatrizPrevia() {
+        document.getElementById('infoPeriodo').innerText = 'Matriz Previa Cargada - Escaneando Turnos Nocturnos y Almuerzos';
+        document.getElementById('resultadoRango').style.display = 'block';
+
+        const headerRow = registrosCargadosRows[1];
+        let year = "2026";
+        let fechasProcesadas = [];
+        for (let col = 2; col < headerRow.length; col++) {
+            if (headerRow[col]) {
+                let valHeader = String(headerRow[col]).trim();
+                let fFormat = valHeader.includes('-') && valHeader.split('-')[0].length === 4 ? valHeader : `${year}-${valHeader.replace(/^\//, '')}`;
+                fechasProcesadas.push({ col: col, fecha: fFormat, rawHeader: valHeader });
+            }
+        }
+
+        let alertasPorEmpleado = {};
+
+        for (let r = 2; r < registrosCargadosRows.length; r++) {
+            let row = registrosCargadosRows[r];
+            if (row && row.length >= 2) {
+                let id = String(row[0]).trim();
+                let nombre = String(row[1]).trim();
+
+                if (id && nombre && id !== 'ID') {
+                    fechasProcesadas.forEach(f => {
+                        let rawMarcas = row[f.col] ? String(row[f.col]).trim() : '--';
+                        let keyCorr = `${nombre}_${f.fecha}`;
+
+                        if (!marcacionesCorregidas.hasOwnProperty(keyCorr)) {
+                            let cleanMarcasText = rawMarcas.split(' ')[0];
+                            if (cleanMarcasText !== '--' && cleanMarcasText !== '' && !cleanMarcasText.includes("Incapacidad") && !cleanMarcasText.includes("Vacaciones")) {
+                                let marcas = cleanMarcasText.includes('/') ? cleanMarcasText.split('/') : cleanMarcasText.split(' ');
+                                marcas = marcas.map(m => m.trim()).filter(m => m.length > 0 && m !== '--');
+
+                                let esNocturno = false;
+                                let esDosRegsLargo = false;
+
+                                if (marcas.length >= 2) {
+                                    let t1 = timeToMinutes(marcas[0]);
+                                    let t2 = timeToMinutes(marcas[1]);
+                                    if (t2 !== null && t1 !== null && t2 < t1) {
+                                        esNocturno = true;
+                                    } else if (marcas.length === 2 && t1 !== null && t2 !== null) {
+                                        let durBruta = (t2 - t1) / 60;
+                                        if (durBruta > 8.0 && !decisionesAlmuerzo.hasOwnProperty(keyCorr) && !rawMarcas.includes("Almuerzo") && !rawMarcas.includes("Autorizado")) {
+                                            esDosRegsLargo = true;
+                                        }
+                                    }
+                                }
+
+                                if (esNocturno || esDosRegsLargo) {
+                                    if (!alertasPorEmpleado[nombre]) alertasPorEmpleado[nombre] = [];
+                                    let tipoAlerta = esNocturno ? 'Turno Nocturno (Cruce de Medianoche)' : '⚠️ Jornada de 2 Registros > 8h (Posible Omisión Almuerzo)';
+                                    alertasPorEmpleado[nombre].push({
+                                        fecha: f.fecha,
+                                        rawMarcas: cleanMarcasText,
+                                        tipo: tipoAlerta,
+                                        esAlmuerzoCheck: esDosRegsLargo
+                                    });
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        const contenedor = document.getElementById('contenedorBloquesAtipicos');
+        contenedor.innerHTML = '';
+
+        let nombresPendientes = Object.keys(alertasPorEmpleado);
+
+        if (nombresPendientes.length === 0) {
+            contenedor.innerHTML = '<p>✅ No se detectaron alertas pendientes. Procediendo al cálculo final...</p>';
+            document.getElementById('seccionPaso2').style.display = 'block';
+            calcularConsolidadoFinal();
+            return;
+        }
+
+        nombresPendientes.forEach(empNombre => {
+            let htmlBloque = `<div class="block-card">
+                <h3>👤 Colaborador: <strong>${empNombre}</strong></h3>`;
+            
+            alertasPorEmpleado[empNombre].forEach(item => {
+                let key = `${empNombre}_${item.fecha}`;
+                if (item.esAlmuerzoCheck) {
+                    htmlBloque += `
+                        <div class="alert-box" style="background-color:#fff3cd; border-left-color:#ffc107;">
+                            <span class="alert-title" style="color:#856404;">[${item.tipo}]</span> - Fecha: <strong>${item.fecha}</strong><br>
+                            Marcación registrada (2 registros): <code>${item.rawMarcas}</code>
+                            <div class="edit-row">
+                                <label style="margin:0; font-weight:normal;">Selecciona la regla aplicable:</label>
+                                <select id="almuerzo_${key}" style="width: 320px;">
+                                    <option value="descontar">Descontar 1 hora de almuerzo no registrada (Restar 1h)</option>
+                                    <option value="autorizado">Horario especial autorizado / Computar completo</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    htmlBloque += `
+                        <div class="alert-box" style="background-color:#e8f4f8; border-left-color:#2980b9;">
+                            <span class="alert-title" style="color:#2980b9;">[${item.tipo}]</span> - Fecha: <strong>${item.fecha}</strong><br>
+                            Marcación registrada: <code>${item.rawMarcas}</code>
+                            <div class="edit-row">
+                                <label style="margin:0; font-weight:normal;">Confirmar o ajustar marcación:</label>
+                                <input type="text" class="input-bloque-${empNombre}" data-key="${key}" value="${item.rawMarcas}" style="width: 260px;">
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            htmlBloque += `<button class="btn-secondary btn-small" onclick="confirmarBloqueMatrizPrevia('${empNombre}')">Confirmar y Aplicar para ${empNombre}</button>
+            </div>`;
+
+            contenedor.innerHTML += htmlBloque;
+        });
+
+        document.getElementById('seccionPaso2').style.display = 'block';
+    }
+
+    function confirmarBloqueMatrizPrevia(nombreEmp) {
+        const confirmacion = confirm(`¿Deseas confirmar las validaciones para ${nombreEmp}?`);
+        if (confirmacion) {
+            const inputs = document.querySelectorAll(`.input-bloque-${nombreEmp}`);
+            inputs.forEach(inp => {
+                let key = inp.getAttribute('data-key');
+                let val = inp.value.trim();
+                marcacionesCorregidas[key] = val;
+            });
+
+            const selectsAlmuerzo = document.querySelectorAll(`select[id^="almuerzo_${nombreEmp}_"]`);
+            selectsAlmuerzo.forEach(sel => {
+                let key = sel.id.replace('almuerzo_', '');
+                decisionesAlmuerzo[key] = sel.value;
+                marcacionesCorregidas[key] = sel.value === 'descontar' ? 'DESCONTAR_ALMUERZO_1H' : 'AUTORIZADO_COMPLETO';
+            });
+
+            ejecutarPaso2MatrizPrevia();
+        }
+    }
+
+    // PASO 2: CORRECCIÓN DE ATÍPICOS (Reportes Crudos)
+    function ejecutarPaso2() {
+        let rangoInfo = registrosCargadosRows[2] ? registrosCargadosRows[2][0] : '';
+        const fechasHeader = registrosCargadosRows[4];
+        let colIndex = 4;
+        let year = "2026";
+        if (rangoInfo && rangoInfo.includes("Desde:")) year = rangoInfo.split("Desde:")[1].trim().substring(0, 4);
+
+        let fechasProcesadas = [];
+        while (fechasHeader && colIndex < fechasHeader.length && fechasHeader[colIndex]) {
+            let valHeader = fechasHeader[colIndex].toString().trim();
+            if (valHeader.includes("Días") || valHeader.includes("Duración") || valHeader.includes("Tarde") || valHeader.includes("Tiempo")) break;
+            fechasProcesadas.push({ col: colIndex, fecha: `${year}-${valHeader}` });
+            colIndex++;
+        }
+
+        let alertasPorEmpleado = {};
+
+        for (let r = 6; r < registrosCargadosRows.length; r++) {
+            let id = registrosCargadosRows[r][0];
+            let nombre = registrosCargadosRows[r][1];
+
+            if (id && nombre && id !== 'ID') {
+                let numRow = null;
+                let regRow = null;
+
+                for (let subR = r; subR < Math.min(r + 15, registrosCargadosRows.length); subR++) {
+                    let tipo = registrosCargadosRows[subR][3];
+                    if (tipo === 'Horario 1 Número de registros de entrada/salida') numRow = registrosCargadosRows[subR];
+                    if (tipo === 'Horario 1 Registros de asistencia') regRow = registrosCargadosRows[subR];
+                }
+
+                if (regRow) {
+                    fechasProcesadas.forEach(f => {
+                        let keyCorr = `${nombre}_${f.fecha}`;
+                        if (!marcacionesCorregidas.hasOwnProperty(keyCorr)) {
+                            let numRegs = numRow ? String(numRow[f.col] || '0') : '0';
+                            let rawMarcas = String(regRow[f.col] || '--');
+
+                            let marcas = rawMarcas.includes('/') ? rawMarcas.split('/') : rawMarcas.split(' ');
+                            marcas = marcas.map(m => m.trim()).filter(m => m.length > 0 && m !== '--');
+                            let unicas = new Set(marcas);
+
+                            let cruceMedianoche = false;
+                            let esDosRegsLargo = false;
+
+                            if (marcas.length >= 2) {
+                                let t1 = timeToMinutes(marcas[0]);
+                                let t2 = timeToMinutes(marcas[1]);
+                                if (t2 !== null && t1 !== null && t2 < t1) {
+                                    cruceMedianoche = true;
+                                } else if (marcas.length === 2 && t1 !== null && t2 !== null) {
+                                    let durBruta = (t2 - t1) / 60;
+                                    if (durBruta > 8.0 && !decisionesAlmuerzo.hasOwnProperty(keyCorr)) {
+                                        esDosRegsLargo = true;
+                                    }
+                                }
+                            }
+
+                            let esAtipica = (numRegs !== '2' && numRegs !== '4' && numRegs !== '0') || (unicas.size !== marcas.length && marcas.length > 0) || cruceMedianoche || esDosRegsLargo;
+
+                            if (esAtipica) {
+                                if (!alertasPorEmpleado[nombre]) alertasPorEmpleado[nombre] = [];
+                                let tipoAlerta = cruceMedianoche ? 'Turno Nocturno (Cruce de Medianoche)' : (esDosRegsLargo ? '⚠️ Jornada de 2 Registros > 8h (Posible Omisión Almuerzo)' : (unicas.size !== marcas.length ? 'Marcaciones Duplicadas' : 'Número Atípico de Marcaciones'));
+                                alertasPorEmpleado[nombre].push({
+                                    fecha: f.fecha,
+                                    rawMarcas: rawMarcas,
+                                    tipo: tipoAlerta,
+                                    esAlmuerzoCheck: esDosRegsLargo
+                                });
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        const contenedor = document.getElementById('contenedorBloquesAtipicos');
+        contenedor.innerHTML = '';
+
+        let nombresPendientes = Object.keys(alertasPorEmpleado);
+
+        if (nombresPendientes.length === 0) {
+            contenedor.innerHTML = '<p>✅ No hay marcaciones atípicas ni turnos pendientes por revisar.</p>';
+            document.getElementById('seccionPaso2').style.display = 'block';
+            calcularConsolidadoFinal();
+            return;
+        }
+
+        nombresPendientes.forEach(empNombre => {
+            let htmlBloque = `<div class="block-card">
+                <h3>👤 Colaborador: <strong>${empNombre}</strong></h3>`;
+            
+            alertasPorEmpleado[empNombre].forEach(item => {
+                let key = `${empNombre}_${item.fecha}`;
+                let esNocturno = item.tipo.includes('Nocturno');
+                if (item.esAlmuerzoCheck) {
+                    htmlBloque += `
+                        <div class="alert-box" style="background-color:#fff3cd; border-left-color:#ffc107;">
+                            <span class="alert-title" style="color:#856404;">[${item.tipo}]</span> - Fecha: <strong>${item.fecha}</strong><br>
+                            Registros en sistema (2 registros): <code>${item.rawMarcas}</code>
+                            <div class="edit-row">
+                                <label style="margin:0; font-weight:normal;">Selecciona la regla aplicable:</label>
+                                <select id="almuerzo_${key}" style="width: 320px;">
+                                    <option value="descontar">Descontar 1 hora de almuerzo no registrada (Restar 1h)</option>
+                                    <option value="autorizado">Horario especial autorizado / Computar completo</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    htmlBloque += `
+                        <div class="alert-box" style="${esNocturno ? 'background-color:#e8f4f8; border-left-color:#2980b9;' : ''}">
+                            <span class="alert-title" style="${esNocturno ? 'color:#2980b9;' : ''}">[${item.tipo}]</span> - Fecha: <strong>${item.fecha}</strong><br>
+                            Registros en sistema: <code>${item.rawMarcas}</code>
+                            <div class="edit-row">
+                                <label style="margin:0; font-weight:normal;">Confirmar o corregir marcación:</label>
+                                <input type="text" class="input-bloque-${empNombre}" data-key="${key}" value="${item.rawMarcas}" style="width: 260px;">
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            htmlBloque += `<button class="btn-secondary btn-small" onclick="confirmarBloqueEmpleado('${empNombre}')">Confirmar y Aplicar para ${empNombre}</button>
+            </div>`;
+
+            contenedor.innerHTML += htmlBloque;
+        });
+
+        document.getElementById('seccionPaso2').style.display = 'block';
+    }
+
+    function confirmarBloqueEmpleado(nombreEmp) {
+        const confirmacion = confirm(`¿Deseas aplicar las correcciones y confirmaciones para los datos de ${nombreEmp}?`);
+        if (confirmacion) {
+            const inputs = document.querySelectorAll(`.input-bloque-${nombreEmp}`);
+            inputs.forEach(inp => {
+                let key = inp.getAttribute('data-key');
+                let val = inp.value.trim();
+                marcacionesCorregidas[key] = val;
+            });
+
+            const selectsAlmuerzo = document.querySelectorAll(`select[id^="almuerzo_${nombreEmp}_"]`);
+            selectsAlmuerzo.forEach(sel => {
+                let key = sel.id.replace('almuerzo_', '');
+                decisionesAlmuerzo[key] = sel.value;
+                marcacionesCorregidas[key] = sel.value === 'descontar' ? 'DESCONTAR_ALMUERZO_1H' : 'AUTORIZADO_COMPLETO';
+            });
+
+            ejecutarPaso2();
+        }
+    }
+
+    // ANÁLISIS DE JORNADA
+    function analizarJornada(rawMarcas, keyCorr = null) {
+        if (!rawMarcas || rawMarcas === '--' || rawMarcas === '') return { horasDia: 0, recargoNocturno: 0 };
+        
+        let marcas = rawMarcas.includes('/') ? rawMarcas.split('/') : rawMarcas.split(' ');
+        marcas = marcas.map(m => m.trim()).filter(m => m.length > 0 && m !== '--');
+
+        let minutosDia = 0;
+        let recargoNocturnoMin = 0;
+
+        if (marcas.length >= 2) {
+            for (let i = 0; i < marcas.length - 1; i += 2) {
+                let tEntrada = timeToMinutes(marcas[i]);
+                let tSalida = timeToMinutes(marcas[i+1]);
+
+                if (tEntrada !== null && tSalida !== null) {
+                    let salidaMinutos = tSalida;
+                    if (salidaMinutos < tEntrada) {
+                        salidaMinutos += 24 * 60;
+                    }
+
+                    let duracionIntervalo = salidaMinutos - tEntrada;
+                    minutosDia += duracionIntervalo;
+
+                    let inicioNocturno = 19 * 60; 
+                    let finNocturno = (6 * 60) + (24 * 60); 
+
+                    let eEfectiva = tEntrada;
+                    let sEfectiva = salidaMinutos;
+
+                    let solapamientoInicio = Math.max(eEfectiva, inicioNocturno);
+                    let solapamientoFin = Math.min(sEfectiva, finNocturno);
+
+                    if (solapamientoFin > solapamientoInicio) {
+                        recargoNocturnoMin += (solapamientoFin - solapamientoInicio);
+                    }
+
+                    if (tEntrada < 6 * 60) {
+                        let solapAMInicio = tEntrada;
+                        let solapAMFin = Math.min(salidaMinutos, 6 * 60);
+                        if (solapAMFin > solapAMInicio) {
+                            recargoNocturnoMin += (solapAMFin - solapAMInicio);
+                        }
+                    }
+                }
+            }
+        }
+
+        let totalHoras = minutosDia / 60;
+
+        if (marcas.length === 2 && totalHoras > 8.0 && keyCorr) {
+            let decision = decisionesAlmuerzo[keyCorr];
+            if (decision === 'descontar') {
+                totalHoras -= 1.0; 
+            }
+        }
+
+        return { horasDia: totalHoras, recargoNocturno: recargoNocturnoMin / 60 };
+    }
+
+    // CÁLCULO FINAL Y CONSOLIDACIÓN (Actualizado con compensación de déficit semanal)
+    function calcularConsolidadoFinal() {
+        let fechasNuevas = [];
+        let empleados = [];
+        let resumenConsolidado = [];
+        estructuraMatrizExportar = [];
+        let listaFechasDetectadas = [];
+
+        if (esMatrizYaProcesada) {
+            const headerRow = registrosCargadosRows[1];
+            let year = "2026";
+            for (let col = 2; col < headerRow.length; col++) {
+                if (headerRow[col]) {
+                    let valHeader = String(headerRow[col]).trim();
+                    let fFormat = valHeader.includes('-') && valHeader.split('-')[0].length === 4 ? valHeader : `${year}-${valHeader.replace(/^\//, '')}`;
+                    fechasNuevas.push({ col: col, fecha: fFormat, rawHeader: valHeader });
+                    listaFechasDetectadas.push(fFormat);
+                }
+            }
+
+            estructuraMatrizExportar.push([]); 
+
+            let headerMatriz = ["ID", "Nombre"];
+            fechasNuevas.forEach(f => headerMatriz.push(f.rawHeader));
+            estructuraMatrizExportar.push(headerMatriz);
+
+            for (let r = 2; r < registrosCargadosRows.length; r++) {
+                let row = registrosCargadosRows[r];
+                if (row && row.length >= 2) {
+                    let id = String(row[0]).trim();
+                    let nombre = String(row[1]).trim();
+
+                    if (id && nombre && id !== 'ID') {
+                        let totalRecargoNocturno = 0;
+                        let totalRecargoHabilitadas = 0;
+                        let semanasHoras = {};
+                        let semanasDiasActivos = {};
+                        let filaEmp = [id, nombre];
+                        let detalleNov = [];
+
+                        fechasNuevas.forEach(f => {
+                            let keyCorr = `${nombre}_${f.fecha}`;
+                            let rawCellVal = row[f.col] ? String(row[f.col]).trim() : '--';
+                            let rawMarcas = rawCellVal;
+
+                            if (rawCellVal.includes("(-1h Almuerzo)")) {
+                                rawMarcas = rawCellVal.split(" ")[0];
+                                decisionesAlmuerzo[keyCorr] = 'descontar';
+                            } else if (rawCellVal.includes("(Autorizado Completo)")) {
+                                rawMarcas = rawCellVal.split(" ")[0];
+                                decisionesAlmuerzo[keyCorr] = 'autorizado';
+                            }
+
+                            if (marcacionesCorregidas.hasOwnProperty(keyCorr)) {
+                                let cVal = marcacionesCorregidas[keyCorr];
+                                if (cVal === 'DESCONTAR_ALMUERZO_1H') {
+                                    decisionesAlmuerzo[keyCorr] = 'descontar';
+                                } else if (cVal === 'AUTORIZADO_COMPLETO') {
+                                    decisionesAlmuerzo[keyCorr] = 'autorizado';
+                                } else {
+                                    rawMarcas = cVal;
+                                }
+                            }
+
+                            let horasDia = 0;
+                            let nocturnoDia = 0;
+                            let marcaExportar = rawMarcas;
+
+                            if (rawMarcas.includes("Incapacidad")) {
+                                horasDia = 7.0;
+                                if (!detalleNov.includes("Incapacidad")) detalleNov.push("Incapacidad");
+                            } else if (rawMarcas.includes("Vacaciones")) {
+                                horasDia = 7.0;
+                                if (!detalleNov.includes("Vacaciones")) detalleNov.push("Vacaciones");
+                            } else if (rawMarcas !== '--' && rawMarcas !== '') {
+                                let res = analizarJornada(rawMarcas, keyCorr);
+                                horasDia = res.horasDia;
+                                nocturnoDia = res.recargoNocturno;
+                                if (decisionesAlmuerzo[keyCorr] === 'descontar') {
+                                    marcaExportar = `${rawMarcas} (-1h Almuerzo)`;
+                                    if (!detalleNov.includes("Almuerzo Descontado")) detalleNov.push("Almuerzo Descontado");
+                                } else if (decisionesAlmuerzo[keyCorr] === 'autorizado') {
+                                    marcaExportar = `${rawMarcas} (Autorizado Completo)`;
+                                }
+                            }
+
+                            totalRecargoNocturno += nocturnoDia;
+                            if (festivosConfigurados.includes(f.fecha)) totalRecargoHabilitadas += horasDia;
+
+                            filaEmp.push(marcaExportar);
+
+                            let semanaKey = getSunSatWeekKey(f.fecha);
+                            if (!semanasHoras[semanaKey]) {
+                                semanasHoras[semanaKey] = 0;
+                                semanasDiasActivos[semanaKey] = 0;
+                            }
+                            semanasHoras[semanaKey] += horasDia;
+                            if (horasDia > 0) semanasDiasActivos[semanaKey]++;
+                        });
+
+                        estructuraMatrizExportar.push(filaEmp);
+
+                        let totalOrdinarias = 0;
+                        let totalBrutasExtras = 0;
+                        let totalDeficitHoras = 0;
+
+                        Object.keys(semanasHoras).forEach(sem => {
+                            let hs = semanasHoras[sem];
+                            let diasAct = semanasDiasActivos[sem] || 1;
+                            let limiteSemanal = Math.min(42, diasAct * 7.0);
+
+                            if (hs > limiteSemanal) {
+                                totalOrdinarias += limiteSemanal;
+                                totalBrutasExtras += (hs - limiteSemanal);
+                            } else {
+                                totalOrdinarias += hs;
+                                if (hs < limiteSemanal) {
+                                    totalDeficitHoras += (limiteSemanal - hs);
+                                }
+                            }
+                        });
+
+                        let totalExtrasNetas = Math.max(0, totalBrutasExtras - totalDeficitHoras);
+
+                        resumenConsolidado.push({
+                            id: id,
+                            nombre: nombre,
+                            ordinarias: totalOrdinarias.toFixed(2),
+                            extras: totalExtrasNetas.toFixed(2),
+                            nocturnas: totalRecargoNocturno.toFixed(2),
+                            recargoHabilitado: totalRecargoHabilitadas.toFixed(2),
+                            novedadesStr: detalleNov.length > 0 ? detalleNov.join(', ') : 'Revisado y Actualizado'
+                        });
+                    }
+                }
+            }
+
+        } else {
+            let rangoInfo = registrosCargadosRows[2] ? registrosCargadosRows[2][0] : '';
+            const fechasHeader = registrosCargadosRows[4];
+            let colIndex = 4;
+            let year = "2026";
+            if (rangoInfo && rangoInfo.includes("Desde:")) year = rangoInfo.split("Desde:")[1].trim().substring(0, 4);
+
+            while (fechasHeader && colIndex < fechasHeader.length && fechasHeader[colIndex]) {
+                let valHeader = fechasHeader[colIndex].toString().trim();
+                if (valHeader.includes("Días") || valHeader.includes("Duración") || valHeader.includes("Tarde") || valHeader.includes("Tiempo")) break;
+                let fFormat = `${year}-${valHeader}`;
+                fechasNuevas.push({ col: colIndex, fecha: fFormat, rawHeader: valHeader });
+                listaFechasDetectadas.push(fFormat);
+                colIndex++;
+            }
+
+            let dictMatrizEmp = {};
+            let fechasMatriz = [];
+            if (matrizPreviaData) {
+                let headerMatriz = matrizPreviaData[1] || matrizPreviaData[0];
+                for (let col = 2; col < headerMatriz.length; col++) {
+                    if (headerMatriz[col]) {
+                        let hStr = String(headerMatriz[col]).trim();
+                        let fFormat = hStr.includes('-') && hStr.split('-')[0].length === 4 ? hStr : `${year}-${hStr.replace(/^\//, '')}`;
+                        fechasMatriz.push({ col: col, fecha: fFormat, rawHeader: hStr });
+                        listaFechasDetectadas.push(fFormat);
+                    }
+                }
+                for (let r = 2; r < matrizPreviaData.length; r++) {
+                    let row = matrizPreviaData[r];
+                    if (row && row.length >= 2) {
+                        let id = String(row[0]).trim();
+                        let nombre = String(row[1]).trim();
+                        if (id && nombre && id !== 'ID') dictMatrizEmp[nombre] = { id: id, row: row };
+                    }
+                }
+            }
+
+            for (let r = 6; r < registrosCargadosRows.length; r++) {
+                let id = registrosCargadosRows[r][0];
+                let nombre = registrosCargadosRows[r][1];
+
+                if (id && nombre && id !== 'ID') {
+                    let numRow = null;
+                    let regRow = null;
+
+                    for (let subR = r; subR < Math.min(r + 15, registrosCargadosRows.length); subR++) {
+                        let tipo = registrosCargadosRows[subR][3];
+                        if (tipo === 'Horario 1 Número de registros de entrada/salida') numRow = registrosCargadosRows[subR];
+                        if (tipo === 'Horario 1 Registros de asistencia') regRow = registrosCargadosRows[subR];
+                    }
+
+                    if (regRow) {
+                        empleados.push({ id: id, nombre: nombre, numRegistrosRow: numRow, registrosRow: regRow });
+                    }
+                }
+            }
+
+            estructuraMatrizExportar.push([]); 
+
+            let headerCompleto = ["ID", "Nombre"];
+            fechasMatriz.forEach(f => headerCompleto.push(f.rawHeader));
+            fechasNuevas.forEach(f => headerCompleto.push(f.rawHeader));
+            estructuraMatrizExportar.push(headerCompleto);
+
+            let todasLasFechas = [...fechasMatriz, ...fechasNuevas];
+
+            empleados.forEach(emp => {
+                let totalRecargoNocturno = 0;
+                let totalRecargoFechasHabilitadas = 0;
+                let semanasHoras = {};
+                let semanasDiasActivos = {};
+                let filaCompletaEmp = [emp.id, emp.nombre];
+                let detalleNovedadesEmp = [];
+
+                let datosEmpleadoFechas = {};
+
+                if (matrizPreviaData && dictMatrizEmp[emp.nombre]) {
+                    let prevRow = dictMatrizEmp[emp.nombre].row;
+                    fechasMatriz.forEach(f => {
+                        let rawCellVal = prevRow[f.col] ? String(prevRow[f.col]).trim() : '--';
+                        let rawMarcasPrev = rawCellVal;
+                        if (rawCellVal.includes("(-1h Almuerzo)")) {
+                            rawMarcasPrev = rawCellVal.split(" ")[0];
+                            decisionesAlmuerzo[`${emp.nombre}_${f.fecha}`] = 'descontar';
+                        } else if (rawCellVal.includes("(Autorizado Completo)")) {
+                            rawMarcasPrev = rawCellVal.split(" ")[0];
+                            decisionesAlmuerzo[`${emp.nombre}_${f.fecha}`] = 'autorizado';
+                        }
+
+                        let horasDia = 0;
+                        let nocturnoDia = 0;
+
+                        if (rawMarcasPrev.includes("Incapacidad") || rawMarcasPrev.includes("Vacaciones")) {
+                            horasDia = 7.0;
+                        } else if (rawMarcasPrev !== '--' && rawMarcasPrev !== '') {
+                            let res = analizarJornada(rawMarcasPrev, `${emp.nombre}_${f.fecha}`);
+                            horasDia = res.horasDia;
+                            nocturnoDia = res.recargoNocturno;
+                        }
+
+                        totalRecargoNocturno += nocturnoDia;
+                        if (festivosConfigurados.includes(f.fecha)) totalRecargoFechasHabilitadas += horasDia;
+
+                        datosEmpleadoFechas[f.fecha] = { marca: prevRow[f.col], horas: horasDia };
+
+                        let semanaKey = getSunSatWeekKey(f.fecha);
+                        if (!semanasHoras[semanaKey]) {
+                            semanasHoras[semanaKey] = 0;
+                            semanasDiasActivos[semanaKey] = 0;
+                        }
+                        semanasHoras[semanaKey] += horasDia;
+                        if (horasDia > 0) semanasDiasActivos[semanaKey]++;
+                    });
+                } else if (matrizPreviaData) {
+                    fechasMatriz.forEach(f => {
+                        datosEmpleadoFechas[f.fecha] = { marca: '--', horas: 0 };
+                    });
+                }
+
+                fechasNuevas.forEach(f => {
+                    let keyCorr = `${emp.nombre}_${f.fecha}`;
+                    let rawMarcas = String(emp.registrosRow[f.col] || '--');
+
+                    if (marcacionesCorregidas.hasOwnProperty(keyCorr)) {
+                        let cVal = marcacionesCorregidas[keyCorr];
+                        if (cVal === 'DESCONTAR_ALMUERZO_1H') {
+                            decisionesAlmuerzo[keyCorr] = 'descontar';
+                        } else if (cVal === 'AUTORIZADO_COMPLETO') {
+                            decisionesAlmuerzo[keyCorr] = 'autorizado';
+                        } else {
+                            rawMarcas = cVal;
+                        }
+                    }
+
+                    let esFechaHabilitada = festivosConfigurados.includes(f.fecha);
+                    let horasDia = 0;
+                    let nocturnoDia = 0;
+                    let marcaExportar = rawMarcas;
+
+                    if (novedadesAusentismoDiaADia.hasOwnProperty(keyCorr)) {
+                        let novObj = novedadesAusentismoDiaADia[keyCorr];
+                        if (novObj.tipo === 'incapacidad') {
+                            horasDia = 7.0;
+                            marcaExportar = "Incapacidad 7.0h";
+                            if (!detalleNovedadesEmp.includes("Incapacidad")) detalleNovedadesEmp.push("Incapacidad");
+                        } else if (novObj.tipo === 'vacaciones') {
+                            horasDia = 7.0;
+                            marcaExportar = "Vacaciones 7.0h";
+                            if (!detalleNovedadesEmp.includes("Vacaciones")) detalleNovedadesEmp.push("Vacaciones");
+                        } else if (novObj.tipo === 'falla_huella' && novObj.horarioHuella) {
+                            rawMarcas = novObj.horarioHuella;
+                            marcaExportar = novObj.horarioHuella;
+                            if (!detalleNovedadesEmp.includes("Huella Corregida")) detalleNovedadesEmp.push("Huella Corregida");
+                        } else if (novObj.tipo === 'descanso') {
+                            horasDia = 0.0;
+                            marcaExportar = "--";
+                        }
+                    }
+
+                    if (horasDia === 0 && rawMarcas !== '--' && rawMarcas !== '') {
+                        let res = analizarJornada(rawMarcas, keyCorr);
+                        horasDia = res.horasDia;
+                        nocturnoDia = res.recargoNocturno;
+                        if (decisionesAlmuerzo[keyCorr] === 'descontar') {
+                            marcaExportar = `${rawMarcas} (-1h Almuerzo)`;
+                            if (!detalleNovedadesEmp.includes("Almuerzo Descontado")) detalleNovedadesEmp.push("Almuerzo Descontado");
+                        } else if (decisionesAlmuerzo[keyCorr] === 'autorizado') {
+                            marcaExportar = `${rawMarcas} (Autorizado Completo)`;
+                        }
+                    }
+
+                    totalRecargoNocturno += nocturnoDia;
+                    if (esFechaHabilitada) totalRecargoFechasHabilitadas += horasDia;
+
+                    datosEmpleadoFechas[f.fecha] = { marca: marcaExportar, horas: horasDia };
+
+                    let semanaKey = getSunSatWeekKey(f.fecha);
+                    if (!semanasHoras[semanaKey]) {
+                        semanasHoras[semanaKey] = 0;
+                        semanasDiasActivos[semanaKey] = 0;
+                    }
+                    semanasHoras[semanaKey] += horasDia;
+                    if (horasDia > 0) semanasDiasActivos[semanaKey]++;
+                });
+
+                todasLasFechas.forEach(f => {
+                    let obj = datosEmpleadoFechas[f.fecha] || { marca: '--', horas: 0 };
+                    filaCompletaEmp.push(obj.marca);
+                });
+
+                estructuraMatrizExportar.push(filaCompletaEmp);
+
+                let totalOrdinariasEmp = 0;
+                let totalBrutasExtrasEmp = 0;
+                let totalDeficitHorasEmp = 0;
+
+                Object.keys(semanasHoras).forEach(sem => {
+                    let horasSemana = semanasHoras[sem];
+                    let diasActivos = semanasDiasActivos[sem] || 1;
+                    let limiteOrdinarioSemanal = Math.min(42, diasActivos * 7.0);
+
+                    if (horasSemana > limiteOrdinarioSemanal) {
+                        totalOrdinariasEmp += limiteOrdinarioSemanal;
+                        totalBrutasExtrasEmp += (horasSemana - limiteOrdinarioSemanal);
+                    } else {
+                        totalOrdinariasEmp += horasSemana;
+                        if (horasSemana < limiteOrdinarioSemanal) {
+                            totalDeficitHorasEmp += (limiteOrdinarioSemanal - horasSemana);
+                        }
+                    }
+                });
+
+                let totalExtrasNetasEmp = Math.max(0, totalBrutasExtrasEmp - totalDeficitHorasEmp);
+
+                resumenConsolidado.push({
+                    id: emp.id,
+                    nombre: emp.nombre,
+                    ordinarias: totalOrdinariasEmp.toFixed(2),
+                    extras: totalExtrasNetasEmp.toFixed(2),
+                    nocturnas: totalRecargoNocturno.toFixed(2),
+                    recargoHabilitado: totalRecargoFechasHabilitadas.toFixed(2),
+                    novedadesStr: detalleNovedadesEmp.length > 0 ? detalleNovedadesEmp.join(', ') : 'Revisado / Validado'
+                });
+            });
+        }
+
+        let minFecha = "";
+        let maxFecha = "";
+        if (listaFechasDetectadas.length > 0) {
+            listaFechasDetectadas.sort();
+            minFecha = listaFechasDetectadas[0];
+            maxFecha = listaFechasDetectadas[listaFechasDetectadas.length - 1];
+        }
+
+        rangoFechasGlobalStr = `Reporte procesado: desde ${minFecha} al ${maxFecha}`;
+        document.getElementById('tituloRangoProcesado').innerText = `📈 Resumen Consolidado de Nómina (${rangoFechasGlobalStr})`;
+
+        estructuraMatrizExportar[0] = [rangoFechasGlobalStr];
+
+        datosProcesadosGlobal = resumenConsolidado;
+
+        const tbody = document.getElementById('tbodyResumen');
+        tbody.innerHTML = '';
+
+        resumenConsolidado.forEach(r => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${r.id}</td>
+                    <td><strong>${r.nombre}</strong></td>
+                    <td>${r.ordinarias} hs</td>
+                    <td><strong>${r.extras} hs</strong></td>
+                    <td>${r.nocturnas} hs</td>
+                    <td><strong>${r.recargoHabilitado} hs</strong></td>
+                    <td><span class="badge-success">${r.novedadesStr}</span></td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('seccionPaso1').style.display = 'none';
+        document.getElementById('seccionPaso2').style.display = 'none';
+        document.getElementById('seccionResultados').style.display = 'block';
+    }
+
+    function descargarMatrizGeneralExcel() {
+        if (!estructuraMatrizExportar.length) return;
+
+        let wb = XLSX.utils.book_new();
+        let ws = XLSX.utils.aoa_to_sheet(estructuraMatrizExportar);
+
+        XLSX.utils.book_append_sheet(wb, ws, "Matriz Corregida");
+        XLSX.writeFile(wb, "Matriz_General_Marcaciones_Corregidas.xlsx");
+    }
+
+    function descargarNovedadesExcel() {
+        if (!datosProcesadosGlobal.length) return;
+
+        let arrayData = [
+            [rangoFechasGlobalStr],
+            ["ID", "Nombre", "Horas Ordinarias", "Horas Extras (Netas tras Déficit)", "Recargo Nocturno", "Recargo Fechas Habilitadas", "Novedades Registradas"]
+        ];
+
+        datosProcesadosGlobal.forEach(row => {
+            arrayData.push([
+                row.id,
+                row.nombre,
+                parseFloat(row.ordinarias),
+                parseFloat(row.extras),
+                parseFloat(row.nocturnas),
+                parseFloat(row.recargoHabilitado),
+                row.novedadesStr
+            ]);
+        });
+
+        let wb = XLSX.utils.book_new();
+        let ws = XLSX.utils.aoa_to_sheet(arrayData);
+
+        XLSX.utils.book_append_sheet(wb, ws, "Novedades Nómina");
+        XLSX.writeFile(wb, "Reporte_Consolidado_Novedades_Nomina.xlsx");
+    }
+</script>
+
+</body>
+</html>

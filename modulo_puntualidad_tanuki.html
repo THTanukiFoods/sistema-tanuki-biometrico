@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanuki Foods - Módulo de Control de Puntualidad</title>
+    <!-- Librería SheetJS para leer y exportar Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #c0392b;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --border-color: #dcdde1;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--secondary-color), #34495e);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        header p {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .upload-section {
+            border: 2px dashed var(--primary-color);
+            text-align: center;
+            padding: 30px;
+            border-radius: 8px;
+            background: #fff5f5;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            background: #ffe3e3;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background-color: #a93226;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+        }
+
+        .btn-success:hover {
+            background-color: #219653;
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #1a252f;
+        }
+
+        .btn-info {
+            background-color: #2980b9;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        .btn-info:hover {
+            background-color: #1f618d;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--secondary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-danger { background-color: #e74c3c; color: white; }
+        .badge-warning { background-color: #f39c12; color: white; }
+        .badge-success { background-color: #27ae60; color: white; }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        select, input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1>Tanuki Foods - Módulo de Control de Puntualidad</h1>
+            <p>Reporte consolidado de llegadas tarde con soporte para horario 08:30 am</p>
+        </div>
+        <div>
+            <span class="badge badge-warning">Versión Puntualidad 8.3</span>
+        </div>
+    </header>
+
+    <!-- Paso 0: Carga de Archivo -->
+    <div class="card" id="step0-card">
+        <div class="section-title">📂 Carga de Reporte Biométrico o Matriz Corregida</div>
+        <div class="upload-section" onclick="document.getElementById('fileInput').click()">
+            <p><strong>Haz clic aquí para cargar tu archivo Excel (.xlsx o .csv)</strong></p>
+            <p style="font-size: 12px; color: #666;">El sistema detectará limpiamente los colaboradores para iniciar el flujo.</p>
+            <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls, .csv" onchange="procesarArchivo(event)">
+        </div>
+    </div>
+
+    <!-- Paso 1: Selección y Exclusión de Colaboradores en Bloque -->
+    <div class="card hidden" id="step1-card">
+        <div class="section-title">👥 Paso 1: Selección y Exclusión de Colaboradores en Bloque</div>
+        <p style="font-size: 13px; color: #555;">Marca la casilla de los colaboradores que deseas <strong>excluir</strong> del análisis de puntualidad:</p>
+        
+        <div id="listaExcluidosContainer" style="max-height: 300px; overflow-y: auto; margin: 15px 0;"></div>
+
+        <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button class="btn" onclick="avanzarPaso2()">Confirmar Exclusiones y Procesar Puntualidad ➔</button>
+        </div>
+    </div>
+
+    <!-- Paso 2: Procesamiento y Validación con Sugerencias Exclusivas para Anticipadas -->
+    <div class="card hidden" id="step2-card">
+        <div class="section-title">⏱️ Paso 2: Validación con Sugerencia Exclusiva para Llegadas Anticipadas</div>
+        <p style="font-size: 13px; color: #555;">Las llegadas anticipadas muestran sugerencia automática. Las llegadas tarde conservan su marcación original intacta:</p>
+        
+        <div style="margin: 20px 0; display: flex; gap: 15px; align-items: center;">
+            <label for="selectColab" style="font-weight: 600;">Colaborador:</label>
+            <select id="selectColab" onchange="cargarDetalleColaborador()">
+                <option value="">-- Seleccione un colaborador --</option>
+            </select>
+            <span id="contadorInconsistencias" class="badge badge-danger">0 registros pendientes</span>
+        </div>
+
+        <div id="detalleColaboradorContainer"></div>
+
+        <div style="margin-top: 25px; display: flex; gap: 10px; justify-content: space-between; align-items: center;">
+            <span style="font-size: 12px; color: #666;">Al guardar los registros de un colaborador, este se retirará de la lista pendiente.</span>
+            <button class="btn" onclick="avanzarPaso3()">Finalizar y Ver Reportes Consolidados ➔</button>
+        </div>
+    </div>
+
+    <!-- Paso 3: Generación de Reportes Finales por Nombre (Solo Llegadas Tarde) -->
+    <div class="card hidden" id="step3-card">
+        <div class="section-title">📊 Paso 3: Reportes Finales de Llegadas Tarde y Descargas</div>
+        <p style="font-size: 13px; color: #555;" id="periodoTextoInfo"></p>
+        
+        <div style="margin-bottom: 15px; display: flex; gap: 15px; align-items: center;">
+            <select id="selectReporteColab" class="btn" style="background: white; color: var(--text-main); border: 1px solid var(--border-color);" onchange="mostrarReporteIndividual()">
+                <option value="">-- Seleccionar Colaborador para Ver Reporte Individual --</option>
+            </select>
+        </div>
+
+        <div id="vistaReporteIndividual"></div>
+
+        <div style="margin-top: 30px; display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary" id="btnDescargarIndividual" style="display:none;" onclick="exportarReporteIndividualExcel()">📥 Descargar Reporte Individual de Llegadas Tarde (.xlsx)</button>
+            <button class="btn btn-success" onclick="exportarMatrizCorregida()">📥 Descargar Matriz General de Puntualidad Corregida (.xlsx)</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let globalWorkbook = null;
+    let rawRows = [];
+    let listaColaboradoresDescubiertos = [];
+    let registrosPuntualidad = {};
+    let periodoTexto = "";
+    let tipoArchivoCargado = "crudo";
+
+    const horariosEstandar = [
+        "07:00", "08:00", "08:30", "09:00", "10:00", "11:00", "11:30", "11:45",
+        "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
+        "21:00", "22:00", "22:30"
+    ];
+
+    function horaToMinutos(horaStr) {
+        if (!horaStr || horaStr.includes("--")) return null;
+        const partes = horaStr.trim().split(':');
+        if (partes.length < 2) return null;
+        return parseInt(partes[0]) * 60 + parseInt(partes[1]);
+    }
+
+    function minutosToHora(minutos) {
+        const hrs = Math.floor(Math.abs(minutos) / 60);
+        const mins = Math.abs(minutos) % 60;
+        const signo = minutos < 0 ? "-" : "";
+        return `${signo}${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    }
+
+    function limpiarTextoNombre(val) {
+        if (!val || val === 'NaN' || val === 'Nombre' || val === 'undefined') return '';
+        let str = String(val).trim();
+        let lower = str.toLowerCase();
+        if (lower.includes('vacaciones') || lower.includes('incapacidad') || lower.includes('permiso') || lower.includes('ausente') || lower.includes('h')) {
+            return '';
+        }
+        if (str.includes(':')) return '';
+        if (str.includes('/')) str = str.split('/')[0].trim();
+        return str;
+    }
+
+    function encontrarHorarioProgramado(horaRealMin) {
+        let mejorHorario = horariosEstandar[0];
+        let minDif = Infinity;
+        for (let h of horariosEstandar) {
+            let hMin = horaToMinutos(h);
+            let dif = Math.abs(horaRealMin - hMin);
+            if (dif < minDif) {
+                minDif = dif;
+                mejorHorario = h;
+            }
+        }
+        return mejorHorario;
+    }
+
+    function generarSugerenciaSecuencia(registroOriginal, progHorario, esAnticipada) {
+        if (!registroOriginal || !registroOriginal.includes('/')) return registroOriginal;
+        if (!esAnticipada) return registroOriginal;
+
+        let marcas = registroOriginal.split('/').map(m => m.trim());
+        marcas[0] = progHorario;
+        return marcas.join('/');
+    }
+
+    function procesarArchivo(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            globalWorkbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = globalWorkbook.SheetNames[0];
+            const worksheet = globalWorkbook.Sheets[firstSheet];
+            rawRows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+            descubrirColaboradoresYFechas();
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function descubrirColaboradoresYFechas() {
+        listaColaboradoresDescubiertos = [];
+        tipoArchivoCargado = "crudo";
+        let fechasDetectadas = [];
+        let filaCabeceraIndex = -1;
+
+        for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+            let row = rawRows[i];
+            if (!row) continue;
+            let rowStr = row.map(c => String(c)).join(" ");
+            if (rowStr.includes("ID") && (rowStr.includes("Nombre") || rowStr.includes("09-27") || rowStr.includes("27/"))) {
+                filaCabeceraIndex = i;
+                tipoArchivoCargado = "matriz_previa";
+                fechasDetectadas = row.filter(c => c && (String(c).includes("-") || String(c).includes("/")));
+                break;
+            }
+        }
+
+        if (tipoArchivoCargado === "matriz_previa") {
+            for (let i = filaCabeceraIndex + 1; i < rawRows.length; i++) {
+                let row = rawRows[i];
+                if (!row || row.length < 2) continue;
+                let nom = limpiarTextoNombre(row[1]);
+                let ape = row[2] && row[2] !== '--' ? limpiarTextoNombre(row[2]) : '';
+                let nombreCompleto = `${nom} ${ape}`.trim();
+                if (nombreCompleto && !listaColaboradoresDescubiertos.includes(nombreCompleto)) {
+                    listaColaboradoresDescubiertos.push(nombreCompleto);
+                }
+            }
+        } else {
+            for (let i = 0; i < rawRows.length; i++) {
+                let row = rawRows[i];
+                if (!row || row.length === 0) continue;
+                if (row[4]) {
+                    let fVal = String(row[4]).trim();
+                    if (fVal.includes("-") || fVal.includes("/")) fechasDetectadas.push(fVal);
+                }
+                if (row[1] && row[1] !== 'Nombre' && row[1] !== 'NaN') {
+                    let nom = limpiarTextoNombre(row[1]);
+                    let ape = row[2] && row[2] !== '--' ? limpiarTextoNombre(row[2]) : '';
+                    let nombreCompleto = `${nom} ${ape}`.trim();
+                    if (nombreCompleto && !listaColaboradoresDescubiertos.includes(nombreCompleto)) {
+                        listaColaboradoresDescubiertos.push(nombreCompleto);
+                    }
+                }
+            }
+        }
+
+        periodoTexto = fechasDetectadas.length > 0 ? `${fechasDetectadas[0]} al ${fechasDetectadas[fechasDetectadas.length - 1]}` : "27/09/2026 - 19/10/2026";
+        renderizarPaso1Exclusiones();
+    }
+
+    function renderizarPaso1Exclusiones() {
+        document.getElementById('step0-card').classList.add('hidden');
+        document.getElementById('step1-card').classList.remove('hidden');
+
+        let container = document.getElementById('listaExcluidosContainer');
+        let html = `<table><thead><tr><th>Excluir</th><th>Colaborador</th><th>Estado Actual</th></tr></thead><tbody>`;
+
+        listaColaboradoresDescubiertos.forEach((nombre, idx) => {
+            html += `
+                <tr>
+                    <td><input type="checkbox" id="exc_${idx}"></td>
+                    <td><strong>${nombre}</strong></td>
+                    <td><span class="badge badge-success">Activo para Puntualidad</span></td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+
+    function avanzarPaso2() {
+        let excluidosSet = new Set();
+        listaColaboradoresDescubiertos.forEach((nombre, idx) => {
+            let chk = document.getElementById(`exc_${idx}`);
+            if (chk && chk.checked) excluidosSet.add(nombre);
+        });
+
+        procesarPuntualidadFiltro(excluidosSet);
+        document.getElementById('step1-card').classList.add('hidden');
+        document.getElementById('step2-card').classList.remove('hidden');
+        actualizarSelectColaboradoresPaso2();
+    }
+
+    function actualizarSelectColaboradoresPaso2() {
+        let select = document.getElementById('selectColab');
+        select.innerHTML = '<option value="">-- Seleccione un colaborador --</option>';
+
+        let totalPendientes = 0;
+        for (let [nombre, datos] of Object.entries(registrosPuntualidad)) {
+            if (!datos.procesado && datos.anomalias.length > 0) {
+                totalPendientes++;
+                let opt = document.createElement('option');
+                opt.value = nombre;
+                opt.textContent = `${nombre} (${datos.anomalias.length} registros atípicos)`;
+                select.appendChild(opt);
+            }
+        }
+
+        document.getElementById('contadorInconsistencias').textContent = `${totalPendientes} colaboradores pendientes de revisión`;
+        document.getElementById('detalleColaboradorContainer').innerHTML = '';
+    }
+
+    function procesarPuntualidadFiltro(excluidosSet) {
+        registrosPuntualidad = {};
+
+        if (tipoArchivoCargado === "matriz_previa") {
+            let filaCabecera = -1;
+            for (let i = 0; i < 10; i++) {
+                if (rawRows[i] && rawRows[i].map(c => String(c)).join(" ").includes("ID")) {
+                    filaCabecera = i;
+                    break;
+                }
+            }
+            let headers = rawRows[filaCabecera];
+
+            for (let i = filaCabecera + 1; i < rawRows.length; i++) {
+                let row = rawRows[i];
+                if (!row || row.length < 2) continue;
+                let nom = limpiarTextoNombre(row[1]);
+                let ape = row[2] && row[2] !== '--' ? limpiarTextoNombre(row[2]) : '';
+                let nombreCompleto = `${nom} ${ape}`.trim();
+
+                if (!nombreCompleto || excluidosSet.has(nombreCompleto)) continue;
+
+                if (!registrosPuntualidad[nombreCompleto]) {
+                    registrosPuntualidad[nombreCompleto] = { anomalias: [], procesado: false };
+                }
+
+                for (let c = 2; c < row.length; c++) {
+                    let cellVal = String(row[c] || "").trim();
+                    let fechaCol = headers && headers[c] ? headers[c] : `Col ${c}`;
+
+                    if (cellVal && cellVal !== '--' && cellVal.includes(':')) {
+                        let marcas = cellVal.split('/').map(m => m.trim());
+                        let primeraMarcaMin = horaToMinutos(marcas[0]);
+
+                        if (primeraMarcaMin !== null) {
+                            let prog = encontrarHorarioProgramado(primeraMarcaMin);
+                            let progMin = horaToMinutos(prog);
+                            let dif = primeraMarcaMin - progMin;
+
+                            if (dif > 3 || dif < -5) {
+                                let esAnticipada = dif < -5;
+                                let tipo = dif > 3 ? `Llegada Tarde (${minutosToHora(dif)})` : `Anticipada Extemporánea (${minutosToHora(Math.abs(dif))})`;
+                                let sugerencia = generarSugerenciaSecuencia(cellVal, prog, esAnticipada);
+                                
+                                registrosPuntualidad[nombreCompleto].anomalias.push({
+                                    filaIndex: i,
+                                    colIndex: c,
+                                    fecha: fechaCol,
+                                    tipo: tipo,
+                                    programado: prog,
+                                    biometrico: marcas[0],
+                                    retrasoMin: Math.max(0, dif),
+                                    registroOriginal: cellVal,
+                                    sugerencia: sugerencia,
+                                    esAnticipada: esAnticipada
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            let currentNombre = "";
+            for (let i = 0; i < rawRows.length; i++) {
+                let row = rawRows[i];
+                if (!row || row.length === 0) continue;
+
+                if (row[1] && row[1] !== 'Nombre' && row[1] !== 'NaN') {
+                    let nom = limpiarTextoNombre(row[1]);
+                    let ape = row[2] && row[2] !== '--' ? limpiarTextoNombre(row[2]) : '';
+                    let tempNombre = `${nom} ${ape}`.trim();
+                    if (tempNombre) currentNombre = tempNombre;
+                }
+
+                if ((row[3] === 'Horario 1 Registros de asistencia' || (row[3] && String(row[3]).includes('Registros'))) && currentNombre) {
+                    if (excluidosSet.has(currentNombre)) continue;
+
+                    if (!registrosPuntualidad[currentNombre]) {
+                        registrosPuntualidad[currentNombre] = { anomalias: [], procesado: false };
+                    }
+
+                    for (let c = 4; c < row.length; c++) {
+                        let cellVal = String(row[c] || "").trim();
+                        let fechaCol = rawRows[4] && rawRows[4][c] ? rawRows[4][c] : `Col ${c}`;
+
+                        if (cellVal && cellVal !== '--') {
+                            let marcas = cellVal.split('/').map(m => m.trim());
+                            let primeraMarcaMin = horaToMinutos(marcas[0]);
+
+                            if (primeraMarcaMin !== null) {
+                                let prog = encontrarHorarioProgramado(primeraMarcaMin);
+                                let progMin = horaToMinutos(prog);
+                                let dif = primeraMarcaMin - progMin;
+
+                                if (dif > 3 || dif < -5) {
+                                    let esAnticipada = dif < -5;
+                                    let tipo = dif > 3 ? `Llegada Tarde (${minutosToHora(dif)})` : `Anticipada Extemporánea (${minutosToHora(Math.abs(dif))})`;
+                                    let sugerencia = generarSugerenciaSecuencia(cellVal, prog, esAnticipada);
+
+                                    registrosPuntualidad[currentNombre].anomalias.push({
+                                        filaIndex: i,
+                                        colIndex: c,
+                                        fecha: fechaCol,
+                                        tipo: tipo,
+                                        programado: prog,
+                                        biometrico: marcas[0],
+                                        retrasoMin: Math.max(0, dif),
+                                        registroOriginal: cellVal,
+                                        sugerencia: sugerencia,
+                                        esAnticipada: esAnticipada
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    function cargarDetalleColaborador() {
+        let nombre = document.getElementById('selectColab').value;
+        let container = document.getElementById('detalleColaboradorContainer');
+
+        if (!nombre || !registrosPuntualidad[nombre]) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let datos = registrosPuntualidad[nombre];
+        let html = `<h4>Puntualidad de: ${nombre}</h4>`;
+        html += `<table><thead><tr><th>Fecha</th><th>Novedad</th><th>Ingreso Programado</th><th>Registro Biométrico</th><th>Corrección / Secuencia</th><th>Acción Rápida</th></tr></thead><tbody>`;
+
+        datos.anomalias.forEach((anom, idx) => {
+            let botonAccion = anom.esAnticipada 
+                ? `<button class="btn btn-info" onclick="aplicarSugerencia(${idx}, '${anom.sugerencia}')">✅ OK / Usar Sugerencia</button>`
+                : `<span style="font-size: 11px; color: #7f8c8d; font-style: italic;">Llegada tarde (conserva original)</span>`;
+
+            html += `
+                <tr>
+                    <td>${anom.fecha}</td>
+                    <td><span class="badge badge-danger">${anom.tipo}</span></td>
+                    <td>${anom.programado}</td>
+                    <td>${anom.biometrico}</td>
+                    <td>
+                        <input type="text" id="corr_bloque_${idx}" value="${anom.sugerencia}" style="width: 220px;" placeholder="Secuencia corregida">
+                    </td>
+                    <td>${botonAccion}</td>
+                </tr>
+            `;
+        });
+
+        html += `</tbody></table>`;
+        html += `
+            <div style="margin-top: 15px; text-align: right;">
+                <button class="btn btn-success" onclick="guardarCorreccionesBloque('${nombre}')">💾 Guardar Correcciones (${datos.anomalias.length} registros)</button>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    function aplicarSugerencia(idx, sugerencia) {
+        let input = document.getElementById(`corr_bloque_${idx}`);
+        if (input) {
+            input.value = sugerencia;
+            input.style.backgroundColor = "#e8f8f5";
+        }
+    }
+
+    function guardarCorreccionesBloque(nombre) {
+        let datos = registrosPuntualidad[nombre];
+        let totalModificados = datos.anomalias.length;
+
+        if (confirm(`Guardar corrección para ${totalModificados} registros`)) {
+            datos.anomalias.forEach((anom, idx) => {
+                let inputVal = document.getElementById(`corr_bloque_${idx}`).value.trim();
+                if (inputVal && rawRows[anom.filaIndex]) {
+                    rawRows[anom.filaIndex][anom.colIndex] = inputVal;
+                    anom.registroOriginal = inputVal;
+                }
+            });
+
+            datos.procesado = true;
+            alert(`¡Correcciones guardadas exitosamente para ${nombre}!`);
+            actualizarSelectColaboradoresPaso2();
+        }
+    }
+
+    function avanzarPaso3() {
+        document.getElementById('step2-card').classList.add('hidden');
+        document.getElementById('step3-card').classList.remove('hidden');
+
+        document.getElementById('periodoTextoInfo').textContent = `📅 Periodo procesado: ${periodoTexto}`;
+
+        let select = document.getElementById('selectReporteColab');
+        select.innerHTML = '<option value="">-- Seleccionar Colaborador para Ver Reporte Individual --</option>';
+
+        for (let [nombre, datos] of Object.entries(registrosPuntualidad)) {
+            let tieneLlegadasTarde = datos.anomalias.some(a => !a.esAnticipada);
+            if (tieneLlegadasTarde) {
+                let opt = document.createElement('option');
+                opt.value = nombre;
+                opt.textContent = nombre;
+                select.appendChild(opt);
+            }
+        }
+    }
+
+    function mostrarReporteIndividual() {
+        let usuario = document.getElementById('selectReporteColab').value;
+        let vista = document.getElementById('vistaReporteIndividual');
+        let btnDescargar = document.getElementById('btnDescargarIndividual');
+
+        if (!usuario || !registrosPuntualidad[usuario]) {
+            vista.innerHTML = '';
+            btnDescargar.style.display = 'none';
+            return;
+        }
+
+        btnDescargar.style.display = 'inline-flex';
+        let datos = registrosPuntualidad[usuario];
+        let llegadasTarde = datos.anomalias.filter(a => !a.esAnticipada);
+        let totalRetrasoMin = llegadasTarde.reduce((acc, curr) => acc + curr.retrasoMin, 0);
+
+        let html = `
+            <div class="card" id="printReporteIndividual" style="max-width: 700px; margin: 0 auto; border: 1px solid #ccc;">
+                <div style="text-align: center; font-weight: bold; font-size: 16px; color: var(--secondary-color);">LLEGADAS TARDE - ${usuario}</div>
+                <div style="text-align: center; font-size: 13px; color: #666; margin-bottom: 15px;">PERIODO ${periodoTexto}</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>INGRESO PROGRAMADO</th>
+                            <th>REGISTRO BIOMETRICO</th>
+                            <th>RETRASO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        llegadasTarde.forEach(reg => {
+            html += `
+                <tr>
+                    <td>${reg.fecha}</td>
+                    <td>${reg.programado}</td>
+                    <td>${reg.biometrico}</td>
+                    <td>${minutosToHora(reg.retrasoMin)}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    <tr style="font-weight: bold; background: #eee;">
+                        <td colspan="3" style="text-align: right;">TOTAL RETRASO</td>
+                        <td>${minutosToHora(totalRetrasoMin)}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        vista.innerHTML = html;
+    }
+
+    function exportarReporteIndividualExcel() {
+        let usuario = document.getElementById('selectReporteColab').value;
+        if (!usuario || !registrosPuntualidad[usuario]) {
+            alert("Por favor seleccione un colaborador.");
+            return;
+        }
+
+        let datos = registrosPuntualidad[usuario];
+        let llegadasTarde = datos.anomalias.filter(a => !a.esAnticipada);
+
+        let wsData = [
+            [`LLEGADAS TARDE - ${usuario}`],
+            [`PERIODO ${periodoTexto}`],
+            [],
+            ["FECHA", "INGRESO PROGRAMADO", "REGISTRO BIOMETRICO", "RETRASO"]
+        ];
+
+        let totalRetrasoMin = 0;
+        llegadasTarde.forEach(reg => {
+            wsData.push([reg.fecha, reg.programado, reg.biometrico, minutosToHora(reg.retrasoMin)]);
+            totalRetrasoMin += reg.retrasoMin;
+        });
+
+        wsData.push(["TOTAL RETRASO", "", "", minutosToHora(totalRetrasoMin)]);
+
+        let wb = XLSX.utils.book_new();
+        let ws = XLSX.utils.aoa_to_sheet(wsData);
+        XLSX.utils.book_append_sheet(wb, ws, "Llegadas Tarde");
+        XLSX.writeFile(wb, `Reporte_Llegadas_Tarde_${usuario.replace(/\s+/g, '_')}.xlsx`);
+    }
+
+    function exportarMatrizCorregida() {
+        if (!globalWorkbook) {
+            alert("No hay datos cargados para exportar.");
+            return;
+        }
+
+        const firstSheetName = globalWorkbook.SheetNames[0];
+        const newWorksheet = XLSX.utils.aoa_to_sheet(rawRows);
+        globalWorkbook.Sheets[firstSheetName] = newWorksheet;
+
+        XLSX.writeFile(globalWorkbook, "Matriz_Puntualidad_Corregida.xlsx");
+    }
+</script>
+
+</body>
+</html>
