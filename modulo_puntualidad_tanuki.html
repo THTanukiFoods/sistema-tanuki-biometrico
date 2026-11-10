@@ -184,10 +184,10 @@
     <header>
         <div>
             <h1>Tanuki Foods - Módulo de Control de Puntualidad</h1>
-            <p>Validación inteligente de llegadas tarde y control robusto de turnos matutinos</p>
+            <p>Validación avanzada con ajuste interactivo de turno programado y secuencias</p>
         </div>
         <div>
-            <span class="badge badge-warning">Versión Puntualidad 8.4</span>
+            <span class="badge badge-warning">Versión Puntualidad 9.0</span>
         </div>
     </header>
 
@@ -213,10 +213,10 @@
         </div>
     </div>
 
-    <!-- Paso 2: Procesamiento y Validación con Asignación Precisa de Turnos -->
+    <!-- Paso 2: Procesamiento y Validación con Turno Programado Editable -->
     <div class="card hidden" id="step2-card">
-        <div class="section-title">⏱️ Paso 2: Validación Inteligente de Turnos y Llegadas Tarde</div>
-        <p style="font-size: 13px; color: #555;">Las marcaciones entre 08:00 y 08:30 se computan correctamente como llegada tarde respecto a las 08:00 am:</p>
+        <div class="section-title">⏱️ Paso 2: Validación con Ajuste de Turno Programado y Secuencias</div>
+        <p style="font-size: 13px; color: #555;">Puedes ajustar el <strong>Ingreso Programado</strong> si el sistema sugirió un turno distinto al real, y usar la sugerencia o edición manual de secuencia:</p>
         
         <div style="margin: 20px 0; display: flex; gap: 15px; align-items: center;">
             <label for="selectColab" style="font-weight: 600;">Colaborador:</label>
@@ -295,11 +295,6 @@
     }
 
     function encontrarHorarioProgramado(horaRealMin) {
-        // Si la marcación está entre 08:01 (481 min) y 08:30 (510 min), el turno programado por defecto es 08:00 (480 min) para computar llegada tarde
-        if (horaRealMin > 480 && horaRealMin <= 510) {
-            return "08:00";
-        }
-
         let mejorHorario = horariosEstandar[0];
         let minDif = Infinity;
         for (let h of horariosEstandar) {
@@ -575,9 +570,10 @@
 
         let datos = registrosPuntualidad[nombre];
         let html = `<h4>Puntualidad de: ${nombre}</h4>`;
-        html += `<table><thead><tr><th>Fecha</th><th>Novedad</th><th>Ingreso Programado</th><th>Registro Biométrico</th><th>Corrección / Secuencia</th><th>Acción Rápida</th></tr></thead><tbody>`;
+        html += `<table><thead><tr><th>Fecha</th><th>Novedad Inicial</th><th>Ingreso Programado (Editable)</th><th>Registro Biométrico</th><th>Corrección / Secuencia</th><th>Acción Rápida</th></tr></thead><tbody>`;
 
         datos.anomalias.forEach((anom, idx) => {
+            let badgeClass = anom.esAnticipada ? 'badge-warning' : 'badge-danger';
             let botonAccion = anom.esAnticipada 
                 ? `<button class="btn btn-info" onclick="aplicarSugerencia(${idx}, '${anom.sugerencia}')">✅ OK / Usar Sugerencia</button>`
                 : `<span style="font-size: 11px; color: #7f8c8d; font-style: italic;">Llegada tarde (conserva original)</span>`;
@@ -585,11 +581,13 @@
             html += `
                 <tr>
                     <td>${anom.fecha}</td>
-                    <td><span class="badge badge-danger">${anom.tipo}</span></td>
-                    <td>${anom.programado}</td>
+                    <td><span class="badge ${badgeClass}" id="badge_tipo_${idx}">${anom.tipo}</span></td>
+                    <td>
+                        <input type="text" id="prog_edit_${idx}" value="${anom.programado}" style="width: 100px; text-align: center;" onchange="recalcularFila(${idx})">
+                    </td>
                     <td>${anom.biometrico}</td>
                     <td>
-                        <input type="text" id="corr_bloque_${idx}" value="${anom.registroOriginal}" style="width: 220px;" placeholder="Secuencia corregida">
+                        <input type="text" id="corr_bloque_${idx}" value="${anom.sugerencia}" style="width: 200px;" placeholder="Secuencia corregida">
                     </td>
                     <td>${botonAccion}</td>
                 </tr>
@@ -604,6 +602,37 @@
         `;
 
         container.innerHTML = html;
+    }
+
+    function recalcularFila(idx) {
+        let nombre = document.getElementById('selectColab').value;
+        let anom = registrosPuntualidad[nombre].anomalias[idx];
+        let nuevoProg = document.getElementById(`prog_edit_${idx}`).value.trim();
+        
+        let progMin = horaToMinutos(nuevoProg);
+        let bioMin = horaToMinutos(anom.biometrico);
+
+        if (progMin !== null && bioMin !== null) {
+            let dif = bioMin - progMin;
+            anom.programado = nuevoProg;
+            anom.retrasoMin = Math.max(0, dif);
+            anom.esAnticipada = dif < -5;
+
+            let badge = document.getElementById(`badge_tipo_${idx}`);
+            if (dif > 3) {
+                anom.tipo = `Llegada Tarde (${minutosToHora(dif)})`;
+                badge.className = "badge badge-danger";
+                badge.textContent = anom.tipo;
+            } else if (dif < -5) {
+                anom.tipo = `Anticipada Extemporánea (${minutosToHora(Math.abs(dif))})`;
+                badge.className = "badge badge-warning";
+                badge.textContent = anom.tipo;
+            } else {
+                anom.tipo = `A tiempo / Normal`;
+                badge.className = "badge badge-success";
+                badge.textContent = anom.tipo;
+            }
+        }
     }
 
     function aplicarSugerencia(idx, sugerencia) {
@@ -643,7 +672,7 @@
         select.innerHTML = '<option value="">-- Seleccionar Colaborador para Ver Reporte Individual --</option>';
 
         for (let [nombre, datos] of Object.entries(registrosPuntualidad)) {
-            let tieneLlegadasTarde = datos.anomalias.some(a => !a.esAnticipada);
+            let tieneLlegadasTarde = datos.anomalias.some(a => !a.esAnticipada && a.retrasoMin > 3);
             if (tieneLlegadasTarde) {
                 let opt = document.createElement('option');
                 opt.value = nombre;
@@ -666,7 +695,7 @@
 
         btnDescargar.style.display = 'inline-flex';
         let datos = registrosPuntualidad[usuario];
-        let llegadasTarde = datos.anomalias.filter(a => !a.esAnticipada);
+        let llegadasTarde = datos.anomalias.filter(a => !a.esAnticipada && a.retrasoMin > 3);
         let totalRetrasoMin = llegadasTarde.reduce((acc, curr) => acc + curr.retrasoMin, 0);
 
         let html = `
@@ -717,7 +746,7 @@
         }
 
         let datos = registrosPuntualidad[usuario];
-        let llegadasTarde = datos.anomalias.filter(a => !a.esAnticipada);
+        let llegadasTarde = datos.anomalias.filter(a => !a.esAnticipada && a.retrasoMin > 3);
 
         let wsData = [
             [`LLEGADAS TARDE - ${usuario}`],
