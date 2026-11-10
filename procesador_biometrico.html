@@ -60,7 +60,7 @@
             margin-bottom: 5px;
         }
 
-        input[type="text"], input[type="file"], select, input[type="number"] {
+        input[type="text"], input[type="file"], select, input[type="number"], input[type="date"] {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -110,6 +110,35 @@
         .btn-small {
             padding: 6px 12px;
             font-size: 13px;
+        }
+
+        .festivos-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .festivo-tag {
+            background-color: #e8f4f8;
+            border: 1px solid #2980b9;
+            color: #2980b9;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .festivo-tag span {
+            cursor: pointer;
+            font-weight: bold;
+            color: #c0392b;
+        }
+
+        .festivo-tag span:hover {
+            color: #a93226;
         }
 
         .block-card {
@@ -201,7 +230,7 @@
 <div class="container">
     <div class="card">
         <h1>📊 Procesador de Registros Biométricos - Tanuki Foods</h1>
-        <p>Módulo con turnos nocturnos, control de festivos, validación de almuerzos y compensación de déficit semanal.</p>
+        <p>Módulo con recargos nocturnos (Ley 7pm - 6am), selector de festivos, licencias, almuerzos y déficit negativo.</p>
         
         <div class="form-group">
             <label for="modoProcesamiento">Modo de Procesamiento:</label>
@@ -224,10 +253,15 @@
             <input type="file" id="nuevoReporteFile" accept=".xlsx, .xls, .csv, .xlsm">
         </div>
 
+        <!-- SELECTOR INTERACTIVO DE FESTIVOS CON CALENDARIO -->
         <div class="form-group">
-            <label for="inputFestivos">Fechas de Festivos (Formato YYYY-MM-DD, separadas por comas):</label>
-            <input type="text" id="inputFestivos" value="2026-10-12, 2026-11-02" placeholder="Ej: 2026-10-12, 2026-11-02">
-            <div class="help-text">Ingresa las fechas que deseas computar como festivos/recargo oficial para el período cargado.</div>
+            <label>📅 Selección de Días Festivos / Habilitados:</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="date" id="inputFechaCalendario" value="2026-10-12">
+                <button type="button" class="btn-small btn-secondary" onclick="agregarFestivoCalendario()">➕ Agregar Festivo</button>
+            </div>
+            <div class="help-text">Selecciona una fecha en el calendario desplegable y haz clic en Agregar.</div>
+            <div id="listaFestivosTags" class="festivos-container"></div>
         </div>
 
         <button onclick="iniciarProcesamiento()">Procesar y Escanear Turnos / Novedades</button>
@@ -269,8 +303,8 @@
                     <th>ID</th>
                     <th>Nombre</th>
                     <th>Horas Ordinarias</th>
-                    <th>Horas Extras (Netas tras Déficit)</th>
-                    <th>Recargo Nocturno (Post 19:00 / 100% Nocturno)</th>
+                    <th>Horas Extras (Con Saldo Negativo / Deuda)</th>
+                    <th>Recargo Nocturno (Estricto Ley: 7pm - 6am)</th>
                     <th>Recargo Fechas Habilitadas</th>
                     <th>Novedades Aplicadas</th>
                 </tr>
@@ -294,8 +328,39 @@
     let rangoFechasGlobalStr = "";
 
     window.onload = function() {
-        // Inicialización
+        renderizarFestivosTags();
     };
+
+    function agregarFestivoCalendario() {
+        const inputDate = document.getElementById('inputFechaCalendario').value;
+        if (!inputDate) return;
+        if (!festivosConfigurados.includes(inputDate)) {
+            festivosConfigurados.push(inputDate);
+            festivosConfigurados.sort();
+            renderizarFestivosTags();
+        }
+    }
+
+    function eliminarFestivo(fecha) {
+        festivosConfigurados = festivosConfigurados.filter(f => f !== fecha);
+        renderizarFestivosTags();
+    }
+
+    function renderizarFestivosTags() {
+        const contenedor = document.getElementById('listaFestivosTags');
+        contenedor.innerHTML = '';
+        if (festivosConfigurados.length === 0) {
+            contenedor.innerHTML = '<span style="font-size:12px; color:#888; font-style:italic;">No hay festivos seleccionados (puedes agregarlos con el selector).</span>';
+            return;
+        }
+        festivosConfigurados.forEach(f => {
+            contenedor.innerHTML += `
+                <div class="festivo-tag">
+                    🗓️ ${f} <span onclick="eliminarFestivo('${f}')" title="Eliminar festivo">✖</span>
+                </div>
+            `;
+        });
+    }
 
     function toggleModoArchivo(val) {
         if (val === 'acumular') {
@@ -305,12 +370,6 @@
             document.getElementById('groupArchivoInicial').style.display = 'block';
             document.getElementById('groupArchivoAnexo').style.display = 'none';
         }
-    }
-
-    function obtenerFestivosConfigurados() {
-        const txt = document.getElementById('inputFestivos').value;
-        if (!txt) return [];
-        return txt.split(',').map(f => f.trim()).filter(f => f.length > 0);
     }
 
     window.addEventListener('beforeunload', function (e) {
@@ -368,7 +427,6 @@
     }
 
     function iniciarProcesamiento() {
-        festivosConfigurados = obtenerFestivosConfigurados();
         const modo = document.getElementById('modoProcesamiento').value;
 
         if (modo === 'acumular') {
@@ -572,6 +630,7 @@
                                 <option value="descanso">Descanso Programado / Rotativo (0.0 hs)</option>
                                 <option value="incapacidad">Incapacidad Médica (7.0 hs)</option>
                                 <option value="vacaciones">Día de Vacaciones (7.0 hs)</option>
+                                <option value="licencia">Licencia Remunerada (7.0 hs)</option>
                                 <option value="falla_huella">Falla de Huella / Biométrico (Asignar Horario Real)</option>
                             </select>
                         </td>
@@ -600,7 +659,7 @@
 
         if (val === 'descanso') {
             divDet.innerHTML = `<span class="badge-info">Día sin costo adicional</span>`;
-        } else if (val === 'incapacidad' || val === 'vacaciones') {
+        } else if (val === 'incapacidad' || val === 'vacaciones' || val === 'licencia') {
             divDet.innerHTML = `<span class="badge-warning">Computa 7.00 hrs ordinarias</span>`;
         } else if (val === 'falla_huella') {
             divDet.innerHTML = `<input type="text" id="horario_${key}" placeholder="Ej: 11:30/15:30/16:30/21:00" style="width: 200px;">`;
@@ -659,7 +718,7 @@
 
                         if (!marcacionesCorregidas.hasOwnProperty(keyCorr)) {
                             let cleanMarcasText = rawMarcas.split(' ')[0];
-                            if (cleanMarcasText !== '--' && cleanMarcasText !== '' && !cleanMarcasText.includes("Incapacidad") && !cleanMarcasText.includes("Vacaciones")) {
+                            if (cleanMarcasText !== '--' && cleanMarcasText !== '' && !cleanMarcasText.includes("Incapacidad") && !cleanMarcasText.includes("Vacaciones") && !cleanMarcasText.includes("Licencia")) {
                                 let marcas = cleanMarcasText.includes('/') ? cleanMarcasText.split('/') : cleanMarcasText.split(' ');
                                 marcas = marcas.map(m => m.trim()).filter(m => m.length > 0 && m !== '--');
 
@@ -926,7 +985,7 @@
         }
     }
 
-    // ANÁLISIS DE JORNADA
+    // ANÁLISIS DE JORNADA (Estricto Ley Laboral Colombiana: Nocturno de 7pm al día siguiente a las 6am)
     function analizarJornada(rawMarcas, keyCorr = null) {
         if (!rawMarcas || rawMarcas === '--' || rawMarcas === '') return { horasDia: 0, recargoNocturno: 0 };
         
@@ -950,26 +1009,23 @@
                     let duracionIntervalo = salidaMinutos - tEntrada;
                     minutosDia += duracionIntervalo;
 
-                    let inicioNocturno = 19 * 60; 
-                    let finNocturno = (6 * 60) + (24 * 60); 
+                    const rangosNocturnos = [
+                        [0, 360],
+                        [19 * 60, 24 * 60],
+                        [24 * 60, 24 * 60 + 360],
+                        [48 * 60 - 5 * 60, 48 * 60]
+                    ];
 
                     let eEfectiva = tEntrada;
                     let sEfectiva = salidaMinutos;
 
-                    let solapamientoInicio = Math.max(eEfectiva, inicioNocturno);
-                    let solapamientoFin = Math.min(sEfectiva, finNocturno);
-
-                    if (solapamientoFin > solapamientoInicio) {
-                        recargoNocturnoMin += (solapamientoFin - solapamientoInicio);
-                    }
-
-                    if (tEntrada < 6 * 60) {
-                        let solapAMInicio = tEntrada;
-                        let solapAMFin = Math.min(salidaMinutos, 6 * 60);
-                        if (solapAMFin > solapAMInicio) {
-                            recargoNocturnoMin += (solapAMFin - solapAMInicio);
+                    rangosNocturnos.forEach(([nStart, nEnd]) => {
+                        let solapInicio = Math.max(eEfectiva, nStart);
+                        let solapFin = Math.min(sEfectiva, nEnd);
+                        if (solapFin > solapInicio) {
+                            recargoNocturnoMin += (solapFin - solapInicio);
                         }
-                    }
+                    });
                 }
             }
         }
@@ -986,7 +1042,7 @@
         return { horasDia: totalHoras, recargoNocturno: recargoNocturnoMin / 60 };
     }
 
-    // CÁLCULO FINAL Y CONSOLIDACIÓN (Actualizado con compensación de déficit semanal)
+    // CÁLCULO FINAL Y CONSOLIDACIÓN
     function calcularConsolidadoFinal() {
         let fechasNuevas = [];
         let empleados = [];
@@ -1060,6 +1116,9 @@
                             } else if (rawMarcas.includes("Vacaciones")) {
                                 horasDia = 7.0;
                                 if (!detalleNov.includes("Vacaciones")) detalleNov.push("Vacaciones");
+                            } else if (rawMarcas.includes("Licencia")) {
+                                horasDia = 7.0;
+                                if (!detalleNov.includes("Licencia")) detalleNov.push("Licencia");
                             } else if (rawMarcas !== '--' && rawMarcas !== '') {
                                 let res = analizarJornada(rawMarcas, keyCorr);
                                 horasDia = res.horasDia;
@@ -1108,13 +1167,13 @@
                             }
                         });
 
-                        let totalExtrasNetas = Math.max(0, totalBrutasExtras - totalDeficitHoras);
+                        let resultadoExtrasFinal = totalBrutasExtras - totalDeficitHoras;
 
                         resumenConsolidado.push({
                             id: id,
                             nombre: nombre,
                             ordinarias: totalOrdinarias.toFixed(2),
-                            extras: totalExtrasNetas.toFixed(2),
+                            extras: resultadoExtrasFinal.toFixed(2),
                             nocturnas: totalRecargoNocturno.toFixed(2),
                             recargoHabilitado: totalRecargoHabilitadas.toFixed(2),
                             novedadesStr: detalleNov.length > 0 ? detalleNov.join(', ') : 'Revisado y Actualizado'
@@ -1216,7 +1275,7 @@
                         let horasDia = 0;
                         let nocturnoDia = 0;
 
-                        if (rawMarcasPrev.includes("Incapacidad") || rawMarcasPrev.includes("Vacaciones")) {
+                        if (rawMarcasPrev.includes("Incapacidad") || rawMarcasPrev.includes("Vacaciones") || rawMarcasPrev.includes("Licencia")) {
                             horasDia = 7.0;
                         } else if (rawMarcasPrev !== '--' && rawMarcasPrev !== '') {
                             let res = analizarJornada(rawMarcasPrev, `${emp.nombre}_${f.fecha}`);
@@ -1273,6 +1332,10 @@
                             horasDia = 7.0;
                             marcaExportar = "Vacaciones 7.0h";
                             if (!detalleNovedadesEmp.includes("Vacaciones")) detalleNovedadesEmp.push("Vacaciones");
+                        } else if (novObj.tipo === 'licencia') {
+                            horasDia = 7.0;
+                            marcaExportar = "Licencia 7.0h";
+                            if (!detalleNovedadesEmp.includes("Licencia")) detalleNovedadesEmp.push("Licencia");
                         } else if (novObj.tipo === 'falla_huella' && novObj.horarioHuella) {
                             rawMarcas = novObj.horarioHuella;
                             marcaExportar = novObj.horarioHuella;
@@ -1336,13 +1399,13 @@
                     }
                 });
 
-                let totalExtrasNetasEmp = Math.max(0, totalBrutasExtrasEmp - totalDeficitHorasEmp);
+                let resultadoExtrasFinalEmp = totalBrutasExtrasEmp - totalDeficitHorasEmp;
 
                 resumenConsolidado.push({
                     id: emp.id,
                     nombre: emp.nombre,
                     ordinarias: totalOrdinariasEmp.toFixed(2),
-                    extras: totalExtrasNetasEmp.toFixed(2),
+                    extras: resultadoExtrasFinalEmp.toFixed(2),
                     nocturnas: totalRecargoNocturno.toFixed(2),
                     recargoHabilitado: totalRecargoFechasHabilitadas.toFixed(2),
                     novedadesStr: detalleNovedadesEmp.length > 0 ? detalleNovedadesEmp.join(', ') : 'Revisado / Validado'
@@ -1369,12 +1432,14 @@
         tbody.innerHTML = '';
 
         resumenConsolidado.forEach(r => {
+            let valExtrasNum = parseFloat(r.extras);
+            let badgeClass = valExtrasNum < 0 ? 'badge-danger' : 'badge-success';
             tbody.innerHTML += `
                 <tr>
                     <td>${r.id}</td>
                     <td><strong>${r.nombre}</strong></td>
                     <td>${r.ordinarias} hs</td>
-                    <td><strong>${r.extras} hs</strong></td>
+                    <td><span class="${badgeClass}"><strong>${r.extras} hs</strong></span></td>
                     <td>${r.nocturnas} hs</td>
                     <td><strong>${r.recargoHabilitado} hs</strong></td>
                     <td><span class="badge-success">${r.novedadesStr}</span></td>
@@ -1402,7 +1467,7 @@
 
         let arrayData = [
             [rangoFechasGlobalStr],
-            ["ID", "Nombre", "Horas Ordinarias", "Horas Extras (Netas tras Déficit)", "Recargo Nocturno", "Recargo Fechas Habilitadas", "Novedades Registradas"]
+            ["ID", "Nombre", "Horas Ordinarias", "Horas Extras (Con Saldo Negativo)", "Recargo Nocturno", "Recargo Fechas Habilitadas", "Novedades Registradas"]
         ];
 
         datosProcesadosGlobal.forEach(row => {
